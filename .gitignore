@@ -1,0 +1,16 @@
+*.sqlite
+*.db
+*.env
+secrets/
+credentials/
+oauth/
+
+# Rendered media and private channel assets
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.png
+*.jpg
+*.jpeg
+*.webp
