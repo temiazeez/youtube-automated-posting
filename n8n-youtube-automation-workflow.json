@@ -1,0 +1,1308 @@
+[
+  {
+    "id": "YTCompletePipeline26",
+    "name": "YouTube Automation - Complete Pipeline",
+    "active": false,
+    "settings": {
+      "executionOrder": "v1",
+      "timezone": "Africa/Lagos"
+    },
+    "nodes": [
+      {
+        "parameters": {},
+        "id": "td-manual",
+        "name": "Run Manually",
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          80
+        ]
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "weeksInterval": 1,
+                "triggerAtDay": [
+                  1
+                ],
+                "triggerAtHour": 9
+              }
+            ]
+          }
+        },
+        "id": "td-schedule",
+        "name": "Weekly Topic Research",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          0,
+          -80
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "q",
+                "name": "discovery_query",
+                "value": "AI technology cybersecurity software internet",
+                "type": "string"
+              },
+              {
+                "id": "n",
+                "name": "niche",
+                "value": "AI & Digital Technology Explained",
+                "type": "string"
+              },
+              {
+                "id": "a",
+                "name": "target_audience",
+                "value": "Worldwide English-speaking audience",
+                "type": "string"
+              },
+              {
+                "id": "mode",
+                "name": "topic_mode",
+                "value": "automatic",
+                "type": "string"
+              },
+              {
+                "id": "manual",
+                "name": "manual_topic",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "lang",
+                "name": "language",
+                "value": "English",
+                "type": "string"
+              },
+              {
+                "id": "format",
+                "name": "content_type",
+                "value": "long_form",
+                "type": "string"
+              },
+              {
+                "id": "privacy",
+                "name": "youtube_privacy",
+                "value": "private",
+                "type": "string"
+              },
+              {
+                "id": "voice",
+                "name": "voice_name",
+                "value": "en-US-AvaMultilingualNeural-Female",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "td-settings",
+        "name": "Weekly Topic and Channel Settings",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.5,
+        "position": [
+          280,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://hn.algolia.com/api/v1/search",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "query",
+                "value": "={{$json.discovery_query}}"
+              },
+              {
+                "name": "tags",
+                "value": "story"
+              },
+              {
+                "name": "hitsPerPage",
+                "value": "20"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "id": "td-trends",
+        "name": "Fetch Current Tech Signals",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          560,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "Choose the YouTube topic for the niche {{$('Weekly Topic and Channel Settings').item.json.niche}}. If topic_mode is manual and manual_topic is not empty, evaluate and use that topic. Otherwise select the strongest topic from these current signals: {{JSON.stringify($json.hits || [])}}. Score niche relevance, viewer curiosity, evergreen value, current interest, visual potential, originality, copyright safety, monetization risk, research availability, and automation suitability. Return strict JSON with topic, type, trend_score, niche_relevance, estimated_interest, recommended_format, why_now, research_queries, and rejected_alternatives. Do not invent source claims.",
+          "options": {}
+        },
+        "id": "td-agent",
+        "name": "Topic Discovery Agent",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3.1,
+        "position": [
+          840,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const raw=$json.output||''; let topic; try{topic=JSON.parse(String(raw).replace(/^```json\\s*|```$/g,'').trim());}catch(e){topic={topic:'Manual review required',parse_error:e.message,raw_output:raw};} return [{json:{...topic,niche:'AI & Digital Technology Explained',language:'English',target_audience:'Worldwide English-speaking audience',content_type:topic.recommended_format||'long_form'}}];"
+        },
+        "id": "td-parse",
+        "name": "Validate Topic Package",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1120,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const incoming=$json||{}; return [{json:{topic:incoming.topic||'What Actually Happens When You Delete a File?',niche:incoming.niche||'AI & Digital Technology Explained',language:incoming.language||'English',content_type:incoming.content_type||'long_form',target_audience:incoming.target_audience||'Worldwide English-speaking audience',research_queries:incoming.research_queries||[]}}];"
+        },
+        "id": "rs-normalize",
+        "name": "Normalize Topic Input",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1680,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "Research this YouTube topic: {{$json.topic}}. Niche: {{$json.niche}}. Return strict JSON with key_facts, source_requirements, interesting_examples, uncertain_claims, visual_ideas, and potential_hooks. Do not invent citations. Mark every claim that needs current-source verification.",
+          "options": {}
+        },
+        "id": "rs-research",
+        "name": "Research Agent",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3.1,
+        "position": [
+          1960,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "Audit this research package for {{$('Normalize Topic Input').item.json.topic}}: {{$json.output}}. Return strict JSON with verified_facts, rejected_claims, caveats, source_quality_notes, and research_ready. Remove unsupported statements and never manufacture evidence.",
+          "options": {}
+        },
+        "id": "rs-fact",
+        "name": "Fact Verification",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3.1,
+        "position": [
+          2240,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "Create a retention-focused content plan for {{$('Normalize Topic Input').item.json.topic}} using this verified research: {{$json.output}}. Return strict JSON with hook, sections, section_goals, estimated_duration, curiosity_loops, pattern_interrupts, and visual_plan. Add no new facts.",
+          "options": {}
+        },
+        "id": "rs-plan",
+        "name": "Content Planner",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3.1,
+        "position": [
+          2520,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "Write a natural spoken YouTube script in {{$('Normalize Topic Input').item.json.language}} for {{$('Normalize Topic Input').item.json.target_audience}}. Topic: {{$('Normalize Topic Input').item.json.topic}}. Plan: {{$json.output}}. Return strict JSON with title_promise, hook, narration, scenes, visual_keywords, estimated_duration_seconds, and closing. Use short sentences, no padding, fake quotes, repetition, or unsupported claims.",
+          "options": {}
+        },
+        "id": "rs-script",
+        "name": "Script Generator",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3.1,
+        "position": [
+          2800,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "Review this script as a strict quality gate: {{$json.output}}. Return strict JSON with score_0_to_100, decision, first_30_seconds_risk, factual_risk, repetition_issues, robotic_language_issues, visual_variety_issues, required_changes, approved_script, narration, and visual_keywords. Set decision to pass only at 85 or higher.",
+          "options": {}
+        },
+        "id": "rs-gate",
+        "name": "Script Quality Gate",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3.1,
+        "position": [
+          3080,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const raw=$json.output||''; let review; try{review=JSON.parse(String(raw).replace(/^```json\\s*|```$/g,'').trim());}catch(e){review={decision:'manual_review',raw_output:raw,parse_error:e.message};} return [{json:{topic:$('Normalize Topic Input').item.json.topic,content_type:$('Normalize Topic Input').item.json.content_type,quality_review:review,narration:review.narration||review.approved_script||'',visual_keywords:review.visual_keywords||[],next_stage:review.decision==='pass'?'voice_and_video_production':'script_revision',publishing_enabled:false}}];"
+        },
+        "id": "rs-brief",
+        "name": "Prepare Production Brief",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3360,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const x=$json||{}; const review=x.quality_review||{}; const narration=x.narration||review.narration||review.approved_script||'Add an approved narration before running production.'; return [{json:{topic:x.topic||'Technology explainer',narration,visual_keywords:Array.isArray(x.visual_keywords)?x.visual_keywords.join(', '):(x.visual_keywords||x.topic||'technology'),voice_name:'en-US-AvaMultilingualNeural-Female',video_aspect:'16:9',api_base:'http://host.docker.internal:8080/api/v1'}}];"
+        },
+        "id": "vp-prepare",
+        "name": "Edge Neural Voice Settings",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3920,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{$json.api_base + '/videos'}}",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ {video_subject:$json.topic,video_script:$json.narration,video_terms:$json.visual_keywords,video_aspect:$json.video_aspect,video_fit_mode:'cover',video_concat_mode:'sequential',video_transition_mode:'FadeIn',video_clip_duration:5,match_materials_to_script:false,video_count:1,video_source:'local',video_materials:[{provider:'local',url:'ai-datacenter.png',duration:0},{provider:'local',url:'cybersecurity.png',duration:0},{provider:'local',url:'software-cloud.png',duration:0},{provider:'local',url:'global-internet.png',duration:0},{provider:'local',url:'channel-banner.png',duration:0}],voice_name:$json.voice_name,voice_volume:1,voice_rate:1,bgm_type:'random',bgm_volume:0.12,subtitle_enabled:true,subtitle_position:'bottom',subtitle_display_mode:'sentence',subtitle_animation:'none',font_size:52,stroke_width:1.5,n_threads:2} }}",
+          "options": {
+            "timeout": 300000
+          }
+        },
+        "id": "vp-create",
+        "name": "MoneyPrinterTurbo - Create Video",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          4200,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "amount": 30
+        },
+        "id": "vp-wait",
+        "name": "Wait for Render",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          4480,
+          0
+        ],
+        "webhookId": "__REPLACE_WEBHOOKID__"
+      },
+      {
+        "parameters": {
+          "url": "={{'http://host.docker.internal:8080/api/v1/tasks/' + $('MoneyPrinterTurbo - Create Video').item.json.data.task_id}}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "id": "vp-status",
+        "name": "Check Render Status",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          4760,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "done",
+                "leftValue": "={{$json.data.state}}",
+                "rightValue": 1,
+                "operator": {
+                  "type": "number",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "vp-complete",
+        "name": "Render Complete?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          5040,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "failed",
+                "leftValue": "={{$json.data.state}}",
+                "rightValue": -1,
+                "operator": {
+                  "type": "number",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "vp-failed",
+        "name": "Render Failed?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          5320,
+          170
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "throw new Error('MoneyPrinterTurbo render failed: '+JSON.stringify($json.data||$json));"
+        },
+        "id": "vp-error",
+        "name": "Stop on Render Failure",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          5600,
+          240
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const d=$json.data||{}; const download=(p)=>{const rel=String(p||'').replace(/^\\/?tasks\\//,''); return rel?`http://host.docker.internal:8080/api/v1/download/${rel}`:'';}; return [{json:{topic:$('Edge Neural Voice Settings').item.json.topic,task_id:d.task_id,video_url:download((d.videos||[])[0]||(d.combined_videos||[])[0]),audio_url:download(d.audio_file),subtitle_url:download(d.subtitle_path),audio_duration:d.audio_duration||0,render_state:d.state,progress:d.progress,next_stage:'quality_and_packaging',publishing_enabled:false}}];"
+        },
+        "id": "vp-assets",
+        "name": "Prepare Render Assets",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          5320,
+          -40
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const x=$json||{}; const checks={video_present:Boolean(x.video_url),audio_present:Boolean(x.audio_url),subtitles_present:Boolean(x.subtitle_url),render_complete:x.render_state===1}; const failed=Object.entries(checks).filter(([,v])=>!v).map(([k])=>k); return [{json:{...x,programmatic_checks:checks,programmatic_pass:failed.length===0,failed_checks:failed}}];"
+        },
+        "id": "qp-check",
+        "name": "Programmatic Video Checks",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          5600,
+          -40
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "Package this YouTube video accurately. Topic: {{$json.topic}}. Render checks: {{JSON.stringify($json.programmatic_checks)}}. Return strict JSON with title_options (3), description, tags, category, short_description, thumbnail_concepts (3), quality_score, quality_notes, and synthetic_content_disclosure_needed. Avoid keyword stuffing and misleading claims.",
+          "options": {}
+        },
+        "id": "qp-agent",
+        "name": "Packaging and Quality Agent",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3.1,
+        "position": [
+          5880,
+          -40
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const raw=$json.output||''; let p; try{p=JSON.parse(String(raw).replace(/^```json\\s*|```$/g,'').trim());}catch(e){p={title_options:['Manual title required'],description:'',tags:[],thumbnail_concepts:[],quality_score:0,parse_error:e.message};} const src=$('Programmatic Video Checks').item.json; return [{json:{...src,package:p,title:(p.title_options||[])[0]||src.topic,description:p.description||'',tags:p.tags||[],thumbnail_concepts:p.thumbnail_concepts||[],approval_status:'pending',privacy_status:'private'}}];"
+        },
+        "id": "qp-packet",
+        "name": "Build Approval Packet",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          6160,
+          -40
+        ]
+      },
+      {
+        "parameters": {
+          "defineForm": "json",
+          "jsonOutput": "={{JSON.stringify([{fieldLabel:'Topic',fieldName:'topic',fieldType:'text',defaultValue:$json.topic},{fieldLabel:'Title',fieldName:'title',fieldType:'text',defaultValue:$json.title,requiredField:true},{fieldLabel:'Description',fieldName:'description',fieldType:'textarea',defaultValue:$json.description},{fieldLabel:'Video URL',fieldName:'video_url',fieldType:'text',defaultValue:$json.video_url},{fieldLabel:'Decision',fieldName:'decision',fieldType:'radio',fieldOptions:{values:[{option:'Approve private upload'},{option:'Reject'},{option:'Regenerate audio'},{option:'Revise title'}]},requiredField:true}])}}",
+          "options": {
+            "formTitle": "Review YouTube video",
+            "formDescription": "Nothing is uploaded unless you explicitly approve. The initial upload is private.",
+            "buttonLabel": "Submit decision"
+          }
+        },
+        "id": "au-form",
+        "name": "Human Approval",
+        "type": "n8n-nodes-base.form",
+        "typeVersion": 2.5,
+        "position": [
+          6440,
+          -40
+        ],
+        "webhookId": "__REPLACE_WEBHOOKID__"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "approved",
+                "leftValue": "={{$json.decision}}",
+                "rightValue": "Approve private upload",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "au-if",
+        "name": "Approved?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          6720,
+          -40
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{$json.video_url}}",
+          "options": {
+            "response": {
+              "response": {
+                "responseFormat": "file",
+                "outputPropertyName": "video"
+              }
+            },
+            "timeout": 300000
+          }
+        },
+        "id": "au-download",
+        "name": "Download Approved Video",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          7000,
+          -140
+        ]
+      },
+      {
+        "parameters": {
+          "resource": "video",
+          "operation": "upload",
+          "title": "={{$('Human Approval').item.json.title}}",
+          "regionCode": "US",
+          "categoryId": "28",
+          "options": {
+            "description": "={{$('Human Approval').item.json.description}}",
+            "privacyStatus": "private"
+          },
+          "binaryProperty": "video"
+        },
+        "id": "au-youtube",
+        "name": "YouTube Upload - Private",
+        "type": "n8n-nodes-base.youTube",
+        "typeVersion": 1,
+        "position": [
+          7280,
+          -220
+        ],
+        "disabled": false,
+        "notesInFlow": true,
+        "notes": "YouTube OAuth credential connected. Uploads remain private and are reached only after the human approval form.",
+        "credentials": {}
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "file",
+          "operation": "upload",
+          "inputDataFieldName": "video",
+          "name": "={{(($('Human Approval').item.json.title || 'youtube-video').replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\\s+/g, '_').slice(0, 120) || 'youtube-video') + '.mp4'}}",
+          "driveId": {
+            "mode": "list",
+            "value": "My Drive"
+          },
+          "folderId": {
+            "mode": "id",
+            "value": "__REPLACE_GOOGLE_DRIVE_FOLDER_ID__"
+          },
+          "options": {
+            "simplifyOutput": true
+          }
+        },
+        "id": "au-archive",
+        "name": "Google Drive Archive",
+        "type": "n8n-nodes-base.googleDrive",
+        "typeVersion": 3,
+        "position": [
+          7280,
+          -60
+        ],
+        "notesInFlow": true,
+        "notes": "Archives the approved MP4 in the root of My Drive. Choose a dedicated folder later if preferred.",
+        "credentials": {}
+      },
+      {
+        "parameters": {
+          "jsCode": "const approval=$json||{}; const packet=$('Build Approval Packet').item.json||{}; return [{json:{timestamp:new Date().toISOString(),status:'not_published',decision:approval.decision||'rejected',topic:approval.topic||packet.topic||'',title:approval.title||packet.title||'',youtube_video_id:'',youtube_url:'',youtube_privacy:'',drive_file_id:'',drive_url:'',quality_score:packet.package?.quality_score??'',duration_seconds:packet.duration_seconds??'',notes:'Stopped at human approval'}}];"
+        },
+        "id": "au-reject",
+        "name": "Log Rejection or Revision",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          7000,
+          100
+        ]
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "sheet",
+          "operation": "append",
+          "documentId": {
+            "mode": "id",
+            "value": "__REPLACE_GOOGLE_SHEET_ID__"
+          },
+          "sheetName": {
+            "mode": "name",
+            "value": "YouTube Automation Performance Tracker",
+            "cachedResultName": "YouTube Automation Performance Tracker"
+          },
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "value": {}
+          },
+          "options": {
+            "handlingExtraData": "ignoreIt"
+          }
+        },
+        "id": "au-sheet",
+        "name": "Performance Sheet Log",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          8120,
+          -40
+        ],
+        "notesInFlow": true,
+        "notes": "Appends publishing and rejection outcomes to the YouTube Automation Performance Tracker.",
+        "credentials": {}
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "combineBy": "combineByPosition",
+          "numberInputs": 2,
+          "options": {}
+        },
+        "id": "au-publish-merge",
+        "name": "Wait for YouTube and Drive",
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          7560,
+          -140
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const approval=$('Human Approval').item.json||{}; const packet=$('Build Approval Packet').item.json||{}; const youtube=$('YouTube Upload - Private').item.json||{}; const drive=$('Google Drive Archive').item.json||{}; const videoId=youtube.uploadId||youtube.id||youtube.videoId||''; const driveId=drive.id||drive.fileId||''; return [{json:{timestamp:new Date().toISOString(),status:'published_private',decision:approval.decision||'Approve private upload',topic:approval.topic||packet.topic||'',title:approval.title||packet.title||'',youtube_video_id:videoId,youtube_url:videoId?`https://youtu.be/${videoId}`:'',youtube_privacy:'private',drive_file_id:driveId,drive_url:drive.webViewLink||(driveId?`https://drive.google.com/file/d/${driveId}/view`:''),quality_score:packet.package?.quality_score??'',duration_seconds:packet.duration_seconds??'',notes:'Uploaded by the approved weekly automation'}}];"
+        },
+        "id": "au-log-row",
+        "name": "Build Performance Log Row",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          7840,
+          -140
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "strong-topic",
+                "leftValue": "={{$json.niche_relevance}}",
+                "rightValue": 75,
+                "operator": {
+                  "type": "number",
+                  "operation": "gte"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "all-topic-gate",
+        "name": "Topic Score Passes?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1400,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "throw new Error('Topic rejected because niche relevance was below 75. Review Weekly Topic and Channel Settings or run again.');"
+        },
+        "id": "all-topic-reject",
+        "name": "Stop Weak Topic",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1680,
+          180
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "script-ready",
+                "leftValue": "={{$json.next_stage}}",
+                "rightValue": "voice_and_video_production",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "all-script-gate",
+        "name": "Script Approved?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          3640,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "throw new Error('Script quality gate did not pass. Review the required changes before producing a video.');"
+        },
+        "id": "all-script-stop",
+        "name": "Stop Weak Script",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3920,
+          180
+        ]
+      },
+      {
+        "parameters": {
+          "model": "llama3.2:latest",
+          "options": {
+            "temperature": 0.3,
+            "numCtx": 16384,
+            "format": "json",
+            "keepAlive": "30m"
+          }
+        },
+        "id": "all-local-model",
+        "name": "Local AI - Ollama llama3.2",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+        "typeVersion": 1,
+        "position": [
+          2800,
+          360
+        ],
+        "credentials": {}
+      },
+      {
+        "parameters": {
+          "content": "## 1. Weekly topic and research\nEdit **Weekly Topic and Channel Settings** to choose automatic discovery or supply a manual topic. Weak topics stop before production.",
+          "height": 190,
+          "width": 1450,
+          "color": 5
+        },
+        "id": "all-note-topic",
+        "name": "Topic and Research Guide",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          -430
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## 2. Script production\nResearch, fact verification, planning, script writing and a quality gate all run through your private local Ollama model.",
+          "height": 190,
+          "width": 1600,
+          "color": 5
+        },
+        "id": "all-note-script",
+        "name": "Script Guide",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1850,
+          -430
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## 3. Voice and video\nEdge neural narration settings and MoneyPrinterTurbo generate the complete video, subtitles and audio. The workflow polls until rendering finishes.",
+          "height": 190,
+          "width": 1600,
+          "color": 6
+        },
+        "id": "all-note-video",
+        "name": "Video Guide",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          3500,
+          -430
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## 4. Quality, approval and YouTube\nThe video is checked and packaged, then waits for your approval. The connected YouTube upload always starts as private.",
+          "height": 190,
+          "width": 2050,
+          "color": 3
+        },
+        "id": "all-note-publish",
+        "name": "Approval and Publishing Guide",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          5150,
+          -430
+        ]
+      }
+    ],
+    "connections": {
+      "Run Manually": {
+        "main": [
+          [
+            {
+              "node": "Weekly Topic and Channel Settings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Weekly Topic Research": {
+        "main": [
+          [
+            {
+              "node": "Weekly Topic and Channel Settings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Weekly Topic and Channel Settings": {
+        "main": [
+          [
+            {
+              "node": "Fetch Current Tech Signals",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Current Tech Signals": {
+        "main": [
+          [
+            {
+              "node": "Topic Discovery Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Topic Discovery Agent": {
+        "main": [
+          [
+            {
+              "node": "Validate Topic Package",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Topic Package": {
+        "main": [
+          [
+            {
+              "node": "Topic Score Passes?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Topic Score Passes?": {
+        "main": [
+          [
+            {
+              "node": "Normalize Topic Input",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Stop Weak Topic",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Normalize Topic Input": {
+        "main": [
+          [
+            {
+              "node": "Research Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Research Agent": {
+        "main": [
+          [
+            {
+              "node": "Fact Verification",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fact Verification": {
+        "main": [
+          [
+            {
+              "node": "Content Planner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Content Planner": {
+        "main": [
+          [
+            {
+              "node": "Script Generator",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Script Generator": {
+        "main": [
+          [
+            {
+              "node": "Script Quality Gate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Script Quality Gate": {
+        "main": [
+          [
+            {
+              "node": "Prepare Production Brief",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Production Brief": {
+        "main": [
+          [
+            {
+              "node": "Script Approved?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Script Approved?": {
+        "main": [
+          [
+            {
+              "node": "Edge Neural Voice Settings",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Stop Weak Script",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edge Neural Voice Settings": {
+        "main": [
+          [
+            {
+              "node": "MoneyPrinterTurbo - Create Video",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "MoneyPrinterTurbo - Create Video": {
+        "main": [
+          [
+            {
+              "node": "Wait for Render",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait for Render": {
+        "main": [
+          [
+            {
+              "node": "Check Render Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Render Status": {
+        "main": [
+          [
+            {
+              "node": "Render Complete?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Render Complete?": {
+        "main": [
+          [
+            {
+              "node": "Prepare Render Assets",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Render Failed?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Render Failed?": {
+        "main": [
+          [
+            {
+              "node": "Stop on Render Failure",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Wait for Render",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Render Assets": {
+        "main": [
+          [
+            {
+              "node": "Programmatic Video Checks",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Programmatic Video Checks": {
+        "main": [
+          [
+            {
+              "node": "Packaging and Quality Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Packaging and Quality Agent": {
+        "main": [
+          [
+            {
+              "node": "Build Approval Packet",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Approval Packet": {
+        "main": [
+          [
+            {
+              "node": "Human Approval",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Human Approval": {
+        "main": [
+          [
+            {
+              "node": "Approved?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Approved?": {
+        "main": [
+          [
+            {
+              "node": "Download Approved Video",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Log Rejection or Revision",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Download Approved Video": {
+        "main": [
+          [
+            {
+              "node": "YouTube Upload - Private",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Google Drive Archive",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "YouTube Upload - Private": {
+        "main": [
+          [
+            {
+              "node": "Wait for YouTube and Drive",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Drive Archive": {
+        "main": [
+          [
+            {
+              "node": "Wait for YouTube and Drive",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Wait for YouTube and Drive": {
+        "main": [
+          [
+            {
+              "node": "Build Performance Log Row",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Performance Log Row": {
+        "main": [
+          [
+            {
+              "node": "Performance Sheet Log",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log Rejection or Revision": {
+        "main": [
+          [
+            {
+              "node": "Performance Sheet Log",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Local AI - Ollama llama3.2": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Topic Discovery Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Research Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Fact Verification",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Content Planner",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Script Generator",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Script Quality Gate",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Packaging and Quality Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "tags": []
+  }
+]
